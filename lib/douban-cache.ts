@@ -66,6 +66,30 @@ export const HOME_CACHE_KEYS = HOME_CATEGORY_NAMES.map(
   (name) => `category:${HOME_NAME_TO_CATEGORY_KEY[name]}`
 );
 
+export const MOVIE_CATEGORY_CACHE_KEYS: Array<[string, string]> = [
+  ["热门电影", "hot_movies"],
+  ["豆瓣高分", "movies_high_rated"],
+  ["动作片", "movies_action"],
+  ["喜剧片", "movies_comedy"],
+  ["科幻片", "movies_scifi"],
+  ["惊悚片", "movies_thriller"],
+  ["爱情片", "movies_romance"],
+  ["动画电影", "movies_animation"],
+];
+
+export const TV_CATEGORY_CACHE_KEYS: Array<[string, string]> = [
+  ["热门剧集", "hot_tv"],
+  ["国产剧", "chinese_tv"],
+  ["美剧", "us_tv"],
+  ["日剧", "jp_tv"],
+  ["韩剧", "kr_tv"],
+  ["英剧", "tv_uk"],
+  ["综艺节目", "variety"],
+  ["日本动画", "anime"],
+];
+
+export const CATEGORY_LIST_LIMIT = 24;
+
 export async function readCache<T>(
   db: D1Database,
   cacheKey: string
@@ -110,4 +134,33 @@ export async function readCacheMany(
     }
   }
   return result;
+}
+
+export async function readCategorySet(
+  db: D1Database,
+  categories: Array<[string, string]>
+): Promise<{
+  data: Array<{ name: string; data: CachedSubject[] }>;
+  fetchedAt: string | null;
+  missing: string[];
+}> {
+  const cacheKeys = categories.map(([, key]) => `category:${key}`);
+  const cached = await readCacheMany(db, cacheKeys);
+  const missing = categories
+    .filter(([, key]) => !cached.has(`category:${key}`))
+    .map(([, key]) => key);
+
+  const data = categories.map(([name, key]) => ({
+    name,
+    data:
+      cached
+        .get(`category:${key}`)
+        ?.data.slice(0, CATEGORY_LIST_LIMIT) ?? [],
+  }));
+  const fetchedAt = Array.from(cached.values())
+    .map((entry) => entry.fetchedAt)
+    .sort()
+    .pop() ?? null;
+
+  return { data, fetchedAt, missing };
 }

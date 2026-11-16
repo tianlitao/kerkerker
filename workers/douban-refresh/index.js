@@ -21,6 +21,17 @@ const DETAIL_CATEGORIES = [
   ["documentary", "tv", "纪录片"],
 ];
 
+const MOVIE_TV_EXTRA_CATEGORIES = [
+  ["movies_high_rated", "movie", "豆瓣高分"],
+  ["movies_action", "movie", "动作"],
+  ["movies_comedy", "movie", "喜剧"],
+  ["movies_scifi", "movie", "科幻"],
+  ["movies_thriller", "movie", "惊悚"],
+  ["movies_romance", "movie", "爱情"],
+  ["movies_animation", "movie", "动画"],
+  ["tv_uk", "tv", "英剧"],
+];
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
@@ -166,13 +177,22 @@ async function refreshCategory(db, key, type, tag, pages, limit) {
   return collected.length;
 }
 
-const TASKS = DETAIL_CATEGORIES.map(([key, type, tag]) => ({
+const TASKS = [
+  ...DETAIL_CATEGORIES.map(([key, type, tag]) => ({
     key,
     type,
     tag,
     pages: CATEGORY_PAGES,
     limit: PAGE_SIZE,
-  }));
+  })),
+  ...MOVIE_TV_EXTRA_CATEGORIES.map(([key, type, tag]) => ({
+    key,
+    type,
+    tag,
+    pages: 1,
+    limit: 24,
+  })),
+];
 
 async function runBatch(env, keys, includeTop250) {
   const db = env.kerkerker_db;
@@ -210,9 +230,6 @@ async function runBatch(env, keys, includeTop250) {
   return report;
 }
 
-const ALL_KEYS = TASKS.map((task) => task.key);
-// 首页用到的七个分类（in_theaters / hot_tv / chinese_tv / variety /
-// us_tv / jp_tv / kr_tv / anime / documentary）每次都刷新。
 const HOME_KEYS = [
   "in_theaters",
   "hot_tv",
@@ -224,15 +241,18 @@ const HOME_KEYS = [
   "anime",
   "documentary",
 ];
-const DETAIL_KEYS = ALL_KEYS.filter((key) => !HOME_KEYS.includes(key));
+const EXTRA_LIST_KEYS = MOVIE_TV_EXTRA_CATEGORIES.map(([key]) => key);
 
 export default {
   async scheduled(event, env, ctx) {
     const hour = new Date(event.scheduledTime).getUTCHours();
     const sequence = Math.floor(hour / 2);
-    // 首页九个分类每次都刷（9 个子请求），分类页剩余项与 Top250 轮转。
-    // 单次子请求上限 50：9 + 1 + Top250 的 10 次 = 20。
-    const keys = [...HOME_KEYS, DETAIL_KEYS[sequence % DETAIL_KEYS.length]];
+    const extraStart = (sequence * 2) % EXTRA_LIST_KEYS.length;
+    const extraKeys = [
+      EXTRA_LIST_KEYS[extraStart],
+      EXTRA_LIST_KEYS[(extraStart + 1) % EXTRA_LIST_KEYS.length],
+    ];
+    const keys = [...HOME_KEYS, "hot_movies", ...extraKeys];
     const includeTop250 = sequence % 4 === 0;
     ctx.waitUntil(
       runBatch(env, keys, includeTop250).then((report) => {
