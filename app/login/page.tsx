@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") || "/admin/settings";
+  const redirect = searchParams?.get("redirect") || "/admin/settings";
 
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -48,7 +48,7 @@ function LoginForm() {
         <div className="bg-[#1a1a1a] rounded-lg shadow-2xl p-10 border border-[#333]">
           {/* Netflix Logo Style */}
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-[#E50914] mb-2">壳儿</h1>
+            <h1 className="text-4xl font-bold text-[#E50914] mb-2">十分阳光</h1>
             <p className="text-[#808080] text-lg">后台管理系统</p>
           </div>
 

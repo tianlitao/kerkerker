@@ -83,7 +83,7 @@ export default function MovieDetailPage() {
   const params = useParams();
   const router = useRouter();
 
-  const doubanId = params.id as string;
+  const doubanId = params?.id as string;
 
   // 电影详情状态
   const [movieDetail, setMovieDetail] = useState<MovieDetail | null>(null);
@@ -385,7 +385,7 @@ export default function MovieDetailPage() {
               className="text-xl font-bold tracking-tight cursor-pointer hidden sm:block"
               onClick={goBack}
             >
-              <span className="text-red-600">壳儿</span>
+              <span className="text-red-600">十分阳光</span>
               <span className="text-white ml-1">详情</span>
             </h1>
           </div>
@@ -668,56 +668,54 @@ export default function MovieDetailPage() {
                 {(searchStatus === "success" ||
                   (searchStatus === "searching" &&
                     availableSources.length > 0)) && (
-                  <div className="space-y-8">
-                    {/* 快速播放 */}
-                    <button
-                      onClick={handleQuickPlay}
-                      className="w-full md:w-auto flex items-center justify-center gap-3 bg-red-600 hover:bg-red-500 text-white px-10 py-4 rounded-2xl font-bold text-lg transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-red-900/20 group"
-                    >
-                      <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <Play className="w-4 h-4 fill-red-600 text-red-600 ml-0.5" />
-                      </div>
-                      立即播放
-                    </button>
+                    <div className="space-y-8">
+                      {/* 快速播放 */}
+                      <button
+                        onClick={handleQuickPlay}
+                        className="w-full md:w-auto flex items-center justify-center gap-3 bg-red-600 hover:bg-red-500 text-white px-10 py-4 rounded-2xl font-bold text-lg transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-red-900/20 group"
+                      >
+                        <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <Play className="w-4 h-4 fill-red-600 text-red-600 ml-0.5" />
+                        </div>
+                        立即播放
+                      </button>
 
-                    {/* 列表 */}
-                    <div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-                        {availableSources.map((source, index) => (
-                          <button
-                            key={`${source.source_key}-${source.vod_id}`}
-                            onClick={() => handlePlay(source)}
-                            className={`relative p-4 rounded-xl text-left transition-all duration-300 group border ${
-                              index === 0
-                                ? "bg-red-500/10 border-red-500/30 hover:bg-red-500/20 hover:border-red-500/50"
-                                : "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10"
-                            }`}
-                          >
-                            <div className="flex items-start justify-between mb-2">
-                              <span
-                                className={`text-xs font-medium px-2 py-0.5 rounded-md ${
-                                  index === 0
-                                    ? "bg-red-500/20 text-red-300"
-                                    : "bg-white/10 text-gray-400 group-hover:text-white"
+                      {/* 列表 */}
+                      <div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+                          {availableSources.map((source, index) => (
+                            <button
+                              key={`${source.source_key}-${source.vod_id}`}
+                              onClick={() => handlePlay(source)}
+                              className={`relative p-4 rounded-xl text-left transition-all duration-300 group border ${index === 0
+                                  ? "bg-red-500/10 border-red-500/30 hover:bg-red-500/20 hover:border-red-500/50"
+                                  : "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10"
                                 }`}
-                              >
-                                {source.source_name}
-                              </span>
-                              {source.match_confidence === "high" && (
-                                <span className="flex items-center gap-1 text-[10px] text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded-full border border-green-500/20">
-                                  精确
+                            >
+                              <div className="flex items-start justify-between mb-2">
+                                <span
+                                  className={`text-xs font-medium px-2 py-0.5 rounded-md ${index === 0
+                                      ? "bg-red-500/20 text-red-300"
+                                      : "bg-white/10 text-gray-400 group-hover:text-white"
+                                    }`}
+                                >
+                                  {source.source_name}
                                 </span>
-                              )}
-                            </div>
-                            <div className="font-medium text-white text-sm line-clamp-1 group-hover:text-red-400 transition-colors">
-                              {source.vod_name}
-                            </div>
-                          </button>
-                        ))}
+                                {source.match_confidence === "high" && (
+                                  <span className="flex items-center gap-1 text-[10px] text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded-full border border-green-500/20">
+                                    精确
+                                  </span>
+                                )}
+                              </div>
+                              <div className="font-medium text-white text-sm line-clamp-1 group-hover:text-red-400 transition-colors">
+                                {source.vod_name}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {/* 未找到 */}
                 {searchStatus === "not_found" && (

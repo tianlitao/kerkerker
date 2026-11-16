@@ -23,8 +23,8 @@ export default function PlayPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const dramaId = params.id as string;
-  const currentSourceKey = searchParams.get("source");
+  const dramaId = params?.id as string;
+  const currentSourceKey = searchParams?.get("source") ?? null;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

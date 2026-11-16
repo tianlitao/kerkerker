@@ -21,7 +21,8 @@ export function useScrollRestoration(
   } = {}
 ) {
   const pathname = usePathname();
-  const storageKey = key || pathname;
+  // Next 16 起 usePathname() 返回 string | null，这里兜底成 string
+  const storageKey = key || pathname || "";
   const restoredRef = useRef(false);
   const { delay = 0, behavior = 'instant', enabled = true } = options;
 

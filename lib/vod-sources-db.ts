@@ -1,218 +1,212 @@
-import { getDatabase } from "./db";
 import { VodSource } from "@/types/drama";
-import { COLLECTIONS } from "./constants/db";
-import type { AnyBulkWriteOperation } from "mongodb";
+import type { D1Database } from "./d1";
+import { queryAll, queryFirst, execute, batch, sqliteBoolean, toSqliteBoolean, getCurrentTimestamp } from "./d1";
 
-export interface VodSourceDoc {
-  _id?: string;
+export interface VodSourceRow {
   key: string;
   name: string;
   api: string;
-  play_url?: string; // 播放地址前缀
-  use_play_url?: boolean; // 是否使用播放地址
-  priority?: number; // 优先级，数值越小优先级越高
-  search_proxy?: string; // 搜索代理 URL
-  parse_proxy?: string; // 视频解析代理 URL
-  parse_token?: string; // 视频解析 token
-  parse_id?: string; // 视频解析 id 参数
-  type: "json"; // 仅支持 JSON
-  enabled: boolean;
+  play_url?: string | null;
+  use_play_url: number;  // SQLite INTEGER for boolean
+  priority: number;
+  search_proxy?: string | null;
+  parse_proxy?: string | null;
+  parse_token?: string | null;
+  parse_id?: string | null;
+  type: string;
+  enabled: number;  // SQLite INTEGER for boolean
   sort_order: number;
-  created_at: string; // ISO 字符串格式
-  updated_at: string; // ISO 字符串格式
-}
-
-// VOD 源选择配置类型
-export interface VodSourceSelection {
-  _id?: string;
-  id: number;
-  selected_key?: string;
+  created_at: string;
   updated_at: string;
 }
 
-// 将数据库文档转换为 VodSource 类型
-function docToVodSource(doc: VodSourceDoc): VodSource {
+export interface VodSourceSelectionRow {
+  id: number;
+  selected_key?: string | null;
+  updated_at: string;
+}
+
+// Convert database row to VodSource type
+function rowToVodSource(row: VodSourceRow): VodSource {
   return {
-    key: doc.key,
-    name: doc.name,
-    api: doc.api,
-    playUrl: doc.play_url,
-    usePlayUrl: doc.use_play_url ?? true,
-    priority: doc.priority ?? 0,
+    key: row.key,
+    name: row.name,
+    api: row.api,
+    playUrl: row.play_url || undefined,
+    usePlayUrl: sqliteBoolean(row.use_play_url),
+    priority: row.priority,
     type: "json",
-    searchProxy: doc.search_proxy,
-    parseProxy: doc.parse_proxy,
-    parseToken: doc.parse_token,
-    parseId: doc.parse_id,
+    searchProxy: row.search_proxy || undefined,
+    parseProxy: row.parse_proxy || undefined,
+    parseToken: row.parse_token || undefined,
+    parseId: row.parse_id || undefined,
   };
 }
 
-// 获取所有启用的视频源（按 priority 排序，数值越小优先级越高）
-export async function getVodSourcesFromDB(): Promise<VodSource[]> {
-  const db = await getDatabase();
-  const collection = db.collection<VodSourceDoc>(COLLECTIONS.VOD_SOURCES);
-
-  const docs = await collection
-    .find({ enabled: true })
-    .sort({ priority: 1, sort_order: 1, _id: 1 })
-    .toArray();
-
-  return docs.map(docToVodSource);
+// Get all enabled VOD sources sorted by priority
+export async function getVodSourcesFromDB(db: D1Database): Promise<VodSource[]> {
+  const rows = await queryAll<VodSourceRow>(
+    db,
+    `SELECT * FROM vod_sources 
+     WHERE enabled = 1 
+     ORDER BY priority ASC, sort_order ASC`
+  );
+  return rows.map(rowToVodSource);
 }
 
-// 获取所有视频源（包括禁用的，按 priority 排序）
-export async function getAllVodSourcesFromDB(): Promise<VodSourceDoc[]> {
-  const db = await getDatabase();
-  const collection = db.collection<VodSourceDoc>(COLLECTIONS.VOD_SOURCES);
-
-  const docs = await collection
-    .find()
-    .sort({ priority: 1, sort_order: 1, _id: 1 })
-    .toArray();
-
-  return docs;
+// Get all VOD sources (including disabled)
+export async function getAllVodSourcesFromDB(db: D1Database): Promise<VodSourceRow[]> {
+  return queryAll<VodSourceRow>(
+    db,
+    `SELECT * FROM vod_sources 
+     ORDER BY priority ASC, sort_order ASC`
+  );
 }
 
-// 添加或更新视频源
+// Save or update a VOD source
 export async function saveVodSourceToDB(
+  db: D1Database,
   source: VodSource & { enabled?: boolean; sortOrder?: number }
 ) {
-  const db = await getDatabase();
-  const collection = db.collection<VodSourceDoc>(COLLECTIONS.VOD_SOURCES);
-  const now = new Date().toISOString();
+  const now = getCurrentTimestamp();
 
-  const doc: Omit<VodSourceDoc, "_id" | "created_at"> & {
-    created_at?: string;
-  } = {
-    key: source.key,
-    name: source.name,
-    api: source.api,
-    play_url: source.playUrl,
-    use_play_url: source.usePlayUrl ?? true,
-    priority: source.priority ?? 0,
-    search_proxy: source.searchProxy,
-    parse_proxy: source.parseProxy,
-    parse_token: source.parseToken,
-    parse_id: source.parseId,
-    type: source.type,
-    enabled: source.enabled !== undefined ? source.enabled : true,
-    sort_order: source.sortOrder || 0,
-    updated_at: now,
-  };
-
-  await collection.updateOne(
-    { key: source.key },
-    {
-      $set: doc,
-      $setOnInsert: { created_at: now },
-    },
-    { upsert: true }
+  await execute(
+    db,
+    `INSERT INTO vod_sources (
+      key, name, api, play_url, use_play_url, priority,
+      search_proxy, parse_proxy, parse_token, parse_id,
+      type, enabled, sort_order, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(key) DO UPDATE SET
+      name = excluded.name,
+      api = excluded.api,
+      play_url = excluded.play_url,
+      use_play_url = excluded.use_play_url,
+      priority = excluded.priority,
+      search_proxy = excluded.search_proxy,
+      parse_proxy = excluded.parse_proxy,
+      parse_token = excluded.parse_token,
+      parse_id = excluded.parse_id,
+      type = excluded.type,
+      enabled = excluded.enabled,
+      sort_order = excluded.sort_order,
+      updated_at = excluded.updated_at`,
+    [
+      source.key,
+      source.name,
+      source.api,
+      source.playUrl || null,
+      toSqliteBoolean(source.usePlayUrl ?? true),
+      source.priority ?? 0,
+      source.searchProxy || null,
+      source.parseProxy || null,
+      source.parseToken || null,
+      source.parseId || null,
+      source.type,
+      toSqliteBoolean(source.enabled !== undefined ? source.enabled : true),
+      source.sortOrder || 0,
+      now,
+      now
+    ]
   );
 }
 
-// 批量保存视频源（原子操作）
-export async function saveVodSourcesToDB(sources: VodSource[]) {
-  const db = await getDatabase();
-  const collection = db.collection<VodSourceDoc>(COLLECTIONS.VOD_SOURCES);
-  const now = new Date().toISOString();
+// Batch save VOD sources (replaces all existing sources)
+export async function saveVodSourcesToDB(db: D1Database, sources: VodSource[]) {
+  const now = getCurrentTimestamp();
 
-  // 构建文档列表
-  const docs: VodSourceDoc[] = sources.map((source, index) => ({
-    key: source.key,
-    name: source.name,
-    api: source.api,
-    play_url: source.playUrl,
-    use_play_url: source.usePlayUrl ?? true,
-    priority: source.priority ?? index,
-    search_proxy: source.searchProxy,
-    parse_proxy: source.parseProxy,
-    parse_token: source.parseToken,
-    parse_id: source.parseId,
-    type: source.type,
-    enabled: true,
-    sort_order: index,
-    created_at: now,
-    updated_at: now,
-  }));
-
-  // 使用 bulkWrite 顺序执行（ordered: true）
-  // 注意：失败时停止后续操作，但已执行操作不会回滚
-  const operations: AnyBulkWriteOperation<VodSourceDoc>[] = [
-    { deleteMany: { filter: {} } },
-    ...docs.map((doc) => ({ insertOne: { document: doc } })),
+  // Build statements for batch operation
+  const statements = [
+    // First delete all existing sources
+    { query: 'DELETE FROM vod_sources' },
+    // Then insert all new sources
+    ...sources.map((source, index) => ({
+      query: `INSERT INTO vod_sources (
+        key, name, api, play_url, use_play_url, priority,
+        search_proxy, parse_proxy, parse_token, parse_id,
+        type, enabled, sort_order, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      params: [
+        source.key,
+        source.name,
+        source.api,
+        source.playUrl || null,
+        toSqliteBoolean(source.usePlayUrl ?? true),
+        source.priority ?? index,
+        source.searchProxy || null,
+        source.parseProxy || null,
+        source.parseToken || null,
+        source.parseId || null,
+        source.type,
+        1, // enabled
+        index, // sort_order
+        now,
+        now
+      ]
+    }))
   ];
 
-  if (operations.length >= 1) {
-    await collection.bulkWrite(operations, { ordered: true });
-  }
+  await batch(db, statements);
 }
 
-// 删除视频源
-export async function deleteVodSourceFromDB(key: string) {
-  const db = await getDatabase();
-  const collection = db.collection<VodSourceDoc>(COLLECTIONS.VOD_SOURCES);
-  await collection.deleteOne({ key });
+// Delete a VOD source by key
+export async function deleteVodSourceFromDB(db: D1Database, key: string) {
+  await execute(db, 'DELETE FROM vod_sources WHERE key = ?', [key]);
 }
 
-// 启用/禁用视频源
-export async function toggleVodSourceEnabled(key: string, enabled: boolean) {
-  const db = await getDatabase();
-  const collection = db.collection<VodSourceDoc>(COLLECTIONS.VOD_SOURCES);
-  const now = new Date().toISOString();
-
-  await collection.updateOne({ key }, { $set: { enabled, updated_at: now } });
-}
-
-// 获取选中的视频源
-export async function getSelectedVodSourceFromDB(): Promise<VodSource | null> {
-  const db = await getDatabase();
-  const selectionCollection = db.collection<VodSourceSelection>(
-    COLLECTIONS.VOD_SOURCE_SELECTION
+// Toggle source enabled/disabled status
+export async function toggleVodSourceEnabled(
+  db: D1Database,
+  key: string,
+  enabled: boolean
+) {
+  const now = getCurrentTimestamp();
+  await execute(
+    db,
+    'UPDATE vod_sources SET enabled = ?, updated_at = ? WHERE key = ?',
+    [toSqliteBoolean(enabled), now, key]
   );
-  const vodSourcesCollection = db.collection<VodSourceDoc>(
-    COLLECTIONS.VOD_SOURCES
-  );
+}
 
-  // 获取选中的 key
-  const selection = await selectionCollection.findOne({ id: 1 });
+// Get selected VOD source
+export async function getSelectedVodSourceFromDB(db: D1Database): Promise<VodSource | null> {
+  // Get the selected key
+  const selection = await queryFirst<VodSourceSelectionRow>(
+    db,
+    'SELECT selected_key FROM vod_source_selection WHERE id = 1'
+  );
 
   if (selection?.selected_key) {
-    const doc = await vodSourcesCollection.findOne({
-      key: selection.selected_key,
-      enabled: true,
-    });
-    if (doc) {
-      return docToVodSource(doc);
+    // Try to get the selected source if it's enabled
+    const row = await queryFirst<VodSourceRow>(
+      db,
+      'SELECT * FROM vod_sources WHERE key = ? AND enabled = 1',
+      [selection.selected_key]
+    );
+    if (row) {
+      return rowToVodSource(row);
     }
   }
 
-  // 如果没有选中的或选中的源不存在，返回第一个启用的源
-  const firstDoc = await vodSourcesCollection
-    .find({ enabled: true })
-    .sort({ sort_order: 1, _id: 1 })
-    .limit(1)
-    .toArray();
+  // If no selection or source not found, return first enabled source
+  const row = await queryFirst<VodSourceRow>(
+    db,
+    'SELECT * FROM vod_sources WHERE enabled = 1 ORDER BY sort_order ASC LIMIT 1'
+  );
 
-  return firstDoc.length > 0 ? docToVodSource(firstDoc[0]) : null;
+  return row ? rowToVodSource(row) : null;
 }
 
-// 保存选中的视频源
-export async function saveSelectedVodSourceToDB(key: string) {
-  const db = await getDatabase();
-  const collection = db.collection<VodSourceSelection>(
-    COLLECTIONS.VOD_SOURCE_SELECTION
-  );
-  const now = new Date().toISOString();
-
-  await collection.updateOne(
-    { id: 1 },
-    {
-      $set: {
-        id: 1,
-        selected_key: key,
-        updated_at: now,
-      },
-    },
-    { upsert: true }
+// Save selected VOD source
+export async function saveSelectedVodSourceToDB(db: D1Database, key: string) {
+  const now = getCurrentTimestamp();
+  await execute(
+    db,
+    `INSERT INTO vod_source_selection (id, selected_key, updated_at) 
+     VALUES (1, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET 
+       selected_key = excluded.selected_key,
+       updated_at = excluded.updated_at`,
+    [key, now]
   );
 }

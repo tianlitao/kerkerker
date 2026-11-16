@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 import {
   getDailymotionConfigFromDB,
   addDailymotionChannelToDB,
@@ -7,10 +8,13 @@ import {
   setDefaultDailymotionChannelInDB,
 } from '@/lib/dailymotion-config-db';
 
-// GET - 获取所有频道配置（带 Redis 缓存）
+// GET - 获取所有频道配置
 export async function GET() {
   try {
-    const config = await getDailymotionConfigFromDB();
+    const { env } = await getCloudflareContext();
+    const db = (env as any).kerkerker_db;
+
+    const config = await getDailymotionConfigFromDB(db);
     return NextResponse.json({
       code: 200,
       message: 'Success',
@@ -29,14 +33,18 @@ export async function GET() {
   }
 }
 
-// POST - 更新配置（使用 MongoDB + Redis 缓存）
+//  POST - 更新配置
 export async function POST(request: NextRequest) {
   try {
+    const { env } = await getCloudflareContext();
+    const db = (env as any).kerkerker_db;
+
     const body = await request.json();
 
     if (body.action === 'add') {
       // 添加新频道
       await addDailymotionChannelToDB(
+        db,
         body.username,
         body.displayName,
         body.avatarUrl
@@ -53,14 +61,14 @@ export async function POST(request: NextRequest) {
       if (body.displayName !== undefined) updates.displayName = body.displayName;
       if (body.avatarUrl !== undefined) updates.avatarUrl = body.avatarUrl;
       if (body.isActive !== undefined) updates.isActive = body.isActive;
-      
-      await updateDailymotionChannelInDB(body.id, updates);
+
+      await updateDailymotionChannelInDB(db, body.id, updates);
     } else if (body.action === 'delete') {
       // 删除频道
-      await deleteDailymotionChannelFromDB(body.id);
+      await deleteDailymotionChannelFromDB(db, body.id);
     } else if (body.action === 'setDefault') {
       // 设置默认频道
-      await setDefaultDailymotionChannelInDB(body.id);
+      await setDefaultDailymotionChannelInDB(db, body.id);
     } else {
       return NextResponse.json(
         {
@@ -73,7 +81,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 返回更新后的配置
-    const config = await getDailymotionConfigFromDB();
+    const config = await getDailymotionConfigFromDB(db);
 
     return NextResponse.json({
       code: 200,

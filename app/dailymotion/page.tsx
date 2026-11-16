@@ -46,8 +46,8 @@ function DailymotionContent() {
   // 初始化活跃频道
   useEffect(() => {
     if (!activeChannelId && channels.length > 0) {
-      const pageFromUrl = parseInt(searchParams.get("page") || "1", 10);
-      const channelFromUrl = searchParams.get("channel");
+      const pageFromUrl = parseInt(searchParams?.get("page") || "1", 10);
+      const channelFromUrl = searchParams?.get("channel");
 
       setCurrentPage(pageFromUrl);
 

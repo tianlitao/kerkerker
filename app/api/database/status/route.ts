@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDatabase, getMongoClient } from '@/lib/db';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 
 /**
  * 数据库状态 API
@@ -9,78 +9,47 @@ import { getDatabase, getMongoClient } from '@/lib/db';
  */
 export async function GET() {
   const startTime = Date.now();
-  
+
   try {
-    const db = await getDatabase();
-    const client = getMongoClient();
-    
-    // 执行 ping 命令测试连接
-    await db.admin().ping();
-    
+    const { env } = await getCloudflareContext();
+    const db = (env as any).kerkerker_db;
+
+    // 执行简单查询测试连接
+    await db.prepare('SELECT 1 as test').first();
+
     const latency = Date.now() - startTime;
-    
-    // 获取数据库基本信息
-    const collections = await db.listCollections().toArray();
-    const dbName = db.databaseName;
-    
-    // 获取服务器信息
-    let serverInfo = null;
-    try {
-      const adminDb = client?.db().admin();
-      if (adminDb) {
-        const buildInfo = await adminDb.command({ buildInfo: 1 });
-        serverInfo = {
-          version: buildInfo.version,
-          gitVersion: buildInfo.gitVersion?.substring(0, 8),
-        };
-      }
-    } catch {
-      // 权限不足时忽略
-    }
-    
+
+    // 获取表列表（SQLite 系统表查询）
+    const tablesResult = await db.prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+    ).all();
+
+    const tables = (tablesResult.results || []).map((row: any) => row.name);
+
     return NextResponse.json({
       code: 200,
       data: {
         connected: true,
         latency,
-        database: dbName,
-        collections: collections.map(c => c.name),
-        collectionCount: collections.length,
-        serverInfo,
-        uri: maskUri(process.env.MONGODB_URI || ''),
+        database: 'kerkerker-db (Cloudflare D1)',
+        databaseType: 'D1 (SQLite)',
+        tables,
+        tableCount: tables.length,
         timestamp: new Date().toISOString(),
       },
     });
   } catch (error) {
     const latency = Date.now() - startTime;
-    
+
     return NextResponse.json({
       code: 500,
       data: {
         connected: false,
         latency,
         error: error instanceof Error ? error.message : 'Unknown error',
-        uri: maskUri(process.env.MONGODB_URI || ''),
+        database: 'kerkerker-db (Cloudflare D1)',
         timestamp: new Date().toISOString(),
       },
     });
-  }
-}
-
-/**
- * 隐藏 URI 中的敏感信息
- */
-function maskUri(uri: string): string {
-  if (!uri) return '(未配置)';
-  
-  try {
-    // 匹配 mongodb://user:password@host 或 mongodb+srv://user:password@host
-    const masked = uri.replace(
-      /^(mongodb(?:\+srv)?:\/\/)([^:]+):([^@]+)@/,
-      '$1$2:****@'
-    );
-    return masked;
-  } catch {
-    return '(格式错误)';
   }
 }

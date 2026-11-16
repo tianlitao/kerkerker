@@ -29,7 +29,7 @@ function SettingsContent() {
 
   // 从 URL 读取初始 tab
   const getInitialTab = (): TabType => {
-    const urlTab = searchParams.get("tab");
+    const urlTab = searchParams?.get("tab");
     if (urlTab && VALID_TABS.includes(urlTab as TabType)) {
       return urlTab as TabType;
     }
@@ -54,7 +54,7 @@ function SettingsContent() {
   // 切换 tab 时更新 URL
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab);
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams?.toString() ?? "");
     params.set("tab", tab);
     router.replace(`?${params.toString()}`, { scroll: false });
   };
@@ -147,7 +147,7 @@ function SettingsContent() {
       <div className="bg-[#141414] border-b border-[#333]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <div className="flex items-center gap-6">
-            <h1 className="text-2xl font-bold text-[#E50914]">壳儿</h1>
+            <h1 className="text-2xl font-bold text-[#E50914]">十分阳光</h1>
             <span className="text-white text-lg">系统设置</span>
           </div>
           <button
@@ -169,11 +169,10 @@ function SettingsContent() {
                 <button
                   key={tab.id}
                   onClick={() => handleTabChange(tab.id)}
-                  className={`px-6 py-4 text-sm font-medium transition-all relative ${
-                    activeTab === tab.id
+                  className={`px-6 py-4 text-sm font-medium transition-all relative ${activeTab === tab.id
                       ? "text-white"
                       : "text-[#808080] hover:text-white"
-                  }`}
+                    }`}
                 >
                   <span className="flex items-center gap-2">
                     <Icon size={18} strokeWidth={1.5} />

@@ -1,7 +1,7 @@
 // 播放器配置管理API
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/db';
-import { COLLECTIONS } from '@/lib/constants/db';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { queryFirst, execute, parseJsonColumn } from '@/lib/d1';
 
 export interface PlayerConfig {
   mode: 'iframe' | 'local' | 'auto'; // 播放器模式
@@ -23,11 +23,6 @@ export interface LocalPlayerSettings {
   autoSaveProgress: boolean; // 自动保存进度
   progressSaveInterval: number; // 进度保存间隔（秒）
   theme: string; // 主题颜色
-}
-
-// MongoDB文档类型（包含_id字段）
-interface PlayerConfigDocument extends PlayerConfig {
-  _id: string;
 }
 
 // 默认配置
@@ -102,19 +97,22 @@ const DEFAULT_CONFIG: PlayerConfig = {
 // 获取配置
 export async function GET() {
   try {
-    const db = await getDatabase();
-    const configCollection = db.collection<PlayerConfigDocument>(COLLECTIONS.PLAYER_CONFIG);
+    const { env } = await getCloudflareContext();
+    const db = (env as any).kerkerker_db;
 
     // 从数据库获取配置
-    const configDoc = await configCollection.findOne({ _id: 'player_config' });
+    const configRow = await queryFirst<{ key: string; value: string }>(
+      db,
+      "SELECT value FROM player_config WHERE key = 'default'"
+    );
 
     // 如果数据库中没有配置，返回默认配置并保存
-    if (!configDoc) {
-      const newDoc: PlayerConfigDocument = {
-        _id: 'player_config',
-        ...DEFAULT_CONFIG,
-      };
-      await configCollection.insertOne(newDoc);
+    if (!configRow || !configRow.value) {
+      await execute(
+        db,
+        "INSERT OR REPLACE INTO player_config (key, value, updated_at) VALUES (?, ?, datetime('now'))",
+        ['default', JSON.stringify(DEFAULT_CONFIG)]
+      );
       return NextResponse.json({
         code: 200,
         data: DEFAULT_CONFIG,
@@ -122,17 +120,28 @@ export async function GET() {
       });
     }
 
-    // 构造返回对象（排除_id字段）
-    const config: PlayerConfig = {
-      mode: configDoc.mode,
-      enableProxy: configDoc.enableProxy,
-      iframePlayers: configDoc.iframePlayers,
-      localPlayerSettings: configDoc.localPlayerSettings,
-    };
+    // 解析 JSON 配置，并与默认配置合并以确保所有字段都存在
+    const storedConfig = parseJsonColumn<Partial<PlayerConfig>>(configRow.value);
+
+    // 如果存储的配置为空或不完整，使用默认配置
+    if (!storedConfig || !storedConfig.mode || !storedConfig.iframePlayers) {
+      const mergedConfig = { ...DEFAULT_CONFIG, ...storedConfig };
+      // 保存完整配置到数据库
+      await execute(
+        db,
+        "INSERT OR REPLACE INTO player_config (key, value, updated_at) VALUES (?, ?, datetime('now'))",
+        ['default', JSON.stringify(mergedConfig)]
+      );
+      return NextResponse.json({
+        code: 200,
+        data: mergedConfig,
+        msg: '获取配置成功',
+      });
+    }
 
     return NextResponse.json({
       code: 200,
-      data: config,
+      data: storedConfig,
       msg: '获取配置成功',
     });
   } catch (error) {
@@ -163,21 +172,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const db = await getDatabase();
-    const configCollection = db.collection<PlayerConfigDocument>(COLLECTIONS.PLAYER_CONFIG);
+    const { env } = await getCloudflareContext();
+    const db = (env as any).kerkerker_db;
 
     // 获取现有配置
-    const existingConfigDoc = await configCollection.findOne({ _id: 'player_config' });
+    const existingRow = await queryFirst<{ value: string }>(
+      db,
+      "SELECT value FROM player_config WHERE key = 'default'"
+    );
 
-    // 从文档中提取配置（排除_id）
     let existingConfig: PlayerConfig | null = null;
-    if (existingConfigDoc) {
-      existingConfig = {
-        mode: existingConfigDoc.mode,
-        enableProxy: existingConfigDoc.enableProxy,
-        iframePlayers: existingConfigDoc.iframePlayers,
-        localPlayerSettings: existingConfigDoc.localPlayerSettings,
-      };
+    if (existingRow) {
+      existingConfig = parseJsonColumn<PlayerConfig>(existingRow.value);
     }
 
     // 合并配置
@@ -187,16 +193,11 @@ export async function POST(request: NextRequest) {
       ...config,
     };
 
-    // 保存到数据库（包含_id）
-    const docToSave: PlayerConfigDocument = {
-      _id: 'player_config',
-      ...mergedConfig,
-    };
-
-    await configCollection.updateOne(
-      { _id: 'player_config' },
-      { $set: docToSave },
-      { upsert: true }
+    // 保存到数据库
+    await execute(
+      db,
+      "INSERT OR REPLACE INTO player_config (key, value, updated_at) VALUES (?, ?, datetime('now'))",
+      ['default', JSON.stringify(mergedConfig)]
     );
 
     return NextResponse.json({

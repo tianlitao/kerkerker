@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { getVodSourcesFromDB } from '@/lib/vod-sources-db';
 import { VodSource } from '@/types/drama';
 
@@ -24,15 +25,15 @@ interface MatchResult {
 function getMatchConfidence(vodName: string, title: string): 'high' | 'medium' | 'low' {
   const normalizedVodName = vodName.toLowerCase().trim();
   const normalizedTitle = title.toLowerCase().trim();
-  
+
   if (normalizedVodName === normalizedTitle) {
     return 'high';
   }
-  
+
   if (normalizedVodName.includes(normalizedTitle) || normalizedTitle.includes(normalizedVodName)) {
     return 'medium';
   }
-  
+
   return 'low';
 }
 
@@ -55,22 +56,22 @@ async function searchSingleSource(
       }),
       signal: AbortSignal.timeout(10000), // 10秒超时
     });
-    
+
     if (!response.ok) {
       return null;
     }
-    
+
     const result = await response.json();
-    
+
     if (result.code === 200 && result.data?.list?.length > 0) {
       // 查找最匹配的结果
       const list: VodItem[] = result.data.list;
-      
+
       // 优先精确匹配
-      let bestMatch = list.find(item => 
+      let bestMatch = list.find(item =>
         item.name.toLowerCase().trim() === title.toLowerCase().trim()
       );
-      
+
       // 其次包含匹配
       if (!bestMatch) {
         bestMatch = list.find(item =>
@@ -78,12 +79,12 @@ async function searchSingleSource(
           title.toLowerCase().includes(item.name.toLowerCase())
         );
       }
-      
+
       // 使用第一个结果
       if (!bestMatch && list.length > 0) {
         bestMatch = list[0];
       }
-      
+
       if (bestMatch) {
         return {
           source_key: source.key,
@@ -95,7 +96,7 @@ async function searchSingleSource(
         };
       }
     }
-    
+
     return null;
   } catch {
     return null;
@@ -106,20 +107,22 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const title = searchParams.get('title');
   const doubanId = searchParams.get('douban_id');
-  
+
   if (!title) {
     return new Response('Missing title parameter', { status: 400 });
   }
-  
-  // 获取所有视频源
-  const allSources = await getVodSourcesFromDB();
-  
+
+  // 获取D1数据库并查询所有视频源
+  const { env } = await getCloudflareContext();
+  const db = (env as any).kerkerker_db;
+  const allSources = await getVodSourcesFromDB(db);
+
   if (allSources.length === 0) {
     return new Response('No video sources configured', { status: 404 });
   }
-  
+
   const origin = request.nextUrl.origin;
-  
+
   // 创建 SSE 流
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -132,25 +135,25 @@ export async function GET(request: NextRequest) {
         totalSources: allSources.length,
       };
       controller.enqueue(encoder.encode(`data: ${JSON.stringify(initData)}\n\n`));
-      
+
       console.log(`\n🔍 开始流式搜索视频源: ${title}`);
-      
+
       let completedCount = 0;
       let foundCount = 0;
-      
+
       // 并行搜索所有源，但每个完成后立即发送结果
       const promises = allSources.map(async (source) => {
         try {
           const result = await searchSingleSource(origin, source, title);
           completedCount++;
-          
+
           if (result) {
             foundCount++;
             console.log(`  ✅ ${source.name} 找到: ${result.vod_name}`);
           } else {
             console.log(`  ❌ ${source.name} 未找到`);
           }
-          
+
           // 发送单个源的结果
           const resultData = {
             type: 'result',
@@ -160,11 +163,13 @@ export async function GET(request: NextRequest) {
             completed: completedCount,
             total: allSources.length,
           };
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(resultData)}\n\n`));
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(resultData)}
+
+`));
         } catch (error) {
           completedCount++;
           console.error(`  ❌ ${source.name} 搜索出错:`, error);
-          
+
           // 发送错误结果
           const errorData = {
             type: 'result',
@@ -174,27 +179,33 @@ export async function GET(request: NextRequest) {
             completed: completedCount,
             total: allSources.length,
           };
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(errorData)}\n\n`));
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(errorData)}
+
+`));
         }
       });
-      
+
       // 等待所有搜索完成
       await Promise.all(promises);
-      
-      console.log(`\n📊 搜索完成: 找到 ${foundCount} 个可用源\n`);
-      
+
+      console.log(`
+📊 搜索完成: 找到 ${foundCount} 个可用源
+`);
+
       // 发送完成信号
       const doneData = {
         type: 'done',
         totalSources: allSources.length,
         foundCount,
       };
-      controller.enqueue(encoder.encode(`data: ${JSON.stringify(doneData)}\n\n`));
-      
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify(doneData)}
+
+`));
+
       controller.close();
     },
   });
-  
+
   return new Response(stream, {
     headers: {
       'Content-Type': 'text/event-stream',

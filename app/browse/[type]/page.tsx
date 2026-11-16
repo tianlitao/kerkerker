@@ -230,11 +230,10 @@ function FilterRow({
             <button
               key={option}
               onClick={() => onChange(option === "全部" ? "" : option)}
-              className={`text-sm transition-colors ${
-                isActive
+              className={`text-sm transition-colors ${isActive
                   ? "text-blue-500 font-medium"
                   : "text-gray-300 hover:text-white"
-              }`}
+                }`}
             >
               {option}
             </button>
@@ -249,7 +248,7 @@ function FilterRow({
 export default function BrowsePage() {
   const router = useRouter();
   const params = useParams();
-  const pageType = (params.type as string) || "movies";
+  const pageType = (params?.type as string) || "movies";
 
   const config = PAGE_CONFIG[pageType] || PAGE_CONFIG.movies;
 
@@ -476,7 +475,7 @@ export default function BrowsePage() {
               <span className="text-sm md:text-base font-medium">返回</span>
             </button>
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-r from-red-600 to-red-500 bg-clip-text text-transparent">
-              壳儿
+              十分阳光
             </h1>
           </div>
         </div>

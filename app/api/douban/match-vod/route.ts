@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { getVodSourcesFromDB } from '@/lib/vod-sources-db';
 import { VodSource } from '@/types/drama';
 
@@ -56,14 +57,14 @@ async function matchSingleSource(
     if (matchedVod) return matchedVod;
 
     // 名称包含匹配
-    matchedVod = vodList.find((vod: VodItem) => 
+    matchedVod = vodList.find((vod: VodItem) =>
       vod.name.includes(title) || title.includes(vod.name)
     );
     if (matchedVod) return matchedVod;
 
     // 如果有年份，尝试年份匹配
     if (year) {
-      matchedVod = vodList.find((vod: VodItem) => 
+      matchedVod = vodList.find((vod: VodItem) =>
         (vod.name.includes(title.substring(0, 3)) || title.includes(vod.name.substring(0, 3))) &&
         vod.year && vod.year.toString() === year.toString()
       );
@@ -89,6 +90,9 @@ function getMatchConfidence(vodName: string, title: string): 'high' | 'medium' |
 // 根据豆瓣影片信息匹配所有VOD播放源
 export async function POST(request: NextRequest) {
   try {
+    const { env } = await getCloudflareContext();
+    const db = (env as any).kerkerker_db;
+
     const body = await request.json();
     const { douban_id, title, year } = body;
 
@@ -102,22 +106,22 @@ export async function POST(request: NextRequest) {
     console.log(`\n🔍 开始搜索所有视频源: ${title}`);
 
     // 从数据库读取视频源配置
-    const allSources: VodSource[] = await getVodSourcesFromDB();
-    
+    const allSources: VodSource[] = await getVodSourcesFromDB(db);
+
     if (allSources.length === 0) {
       return NextResponse.json(
         { code: 404, message: '未配置视频源，请先在后台管理中配置', data: null },
         { status: 404 }
       );
     }
-    
+
     const origin = request.nextUrl.origin;
 
     // 并行搜索所有源
     const matchPromises = allSources.map(async (source) => {
       console.log(`  ⏳ 搜索源: ${source.name}...`);
       const matchedVod = await matchSingleSource(origin, source, title, year);
-      
+
       if (matchedVod) {
         console.log(`  ✅ ${source.name} 找到: ${matchedVod.name}`);
         const result: MatchResult = {
@@ -137,7 +141,7 @@ export async function POST(request: NextRequest) {
 
     // 等待所有搜索完成
     const results = await Promise.all(matchPromises);
-    
+
     // 过滤出成功的匹配结果
     const successfulMatches = results.filter((r): r is MatchResult => r !== null);
 
@@ -146,7 +150,7 @@ export async function POST(request: NextRequest) {
     if (successfulMatches.length > 0) {
       // 按置信度排序：high > medium > low
       const confidenceOrder = { high: 3, medium: 2, low: 1 };
-      successfulMatches.sort((a, b) => 
+      successfulMatches.sort((a, b) =>
         confidenceOrder[b.match_confidence] - confidenceOrder[a.match_confidence]
       );
 

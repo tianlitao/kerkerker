@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 import {
   getShortsSourcesFromDB,
   getShortsSourceByKey,
@@ -46,6 +47,9 @@ function parsePlayUrl(playUrl: string): Episode[] {
 
 export async function GET(request: NextRequest) {
   try {
+    const { env } = await getCloudflareContext();
+    const db = (env as any).kerkerker_db;
+
     const searchParams = request.nextUrl.searchParams;
     const ids = searchParams.get("ids");
     const sourceKey = searchParams.get("source");
@@ -61,12 +65,12 @@ export async function GET(request: NextRequest) {
     let source: ShortDramaSource | null = null;
 
     if (sourceKey) {
-      source = await getShortsSourceByKey(sourceKey);
+      source = await getShortsSourceByKey(db, sourceKey);
     }
 
     // 如果没有找到指定的源，尝试获取第一个可用的源
     if (!source) {
-      const sources = await getShortsSourcesFromDB();
+      const sources = await getShortsSourcesFromDB(db);
       if (sources.length === 0) {
         return NextResponse.json(
           { code: 404, msg: "暂未配置短剧源", data: null },

@@ -125,7 +125,7 @@ const CATEGORY_CONFIG: Record<
 export default function CategoryPage() {
   const router = useRouter();
   const params = useParams();
-  const categoryType = params.type as string;
+  const categoryType = params?.type as string;
 
   // 使用影片点击 hook
   const { handleMovieClick, toast, setToast } = useMovieMatch();
@@ -181,7 +181,7 @@ export default function CategoryPage() {
               <span className="text-sm md:text-base font-medium">返回</span>
             </button>
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-r from-red-600 to-red-500 bg-clip-text text-transparent">
-              壳儿
+              十分阳光
             </h1>
           </div>
         </div>

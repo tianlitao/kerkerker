@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/db';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 
 /**
  * 健康检查 API
@@ -13,7 +13,7 @@ export async function GET() {
     timestamp: string;
     services: {
       api: 'ok';
-      mongodb?: 'ok' | 'error';
+      database?: 'ok' | 'error';
     };
     errors?: string[];
   } = {
@@ -26,16 +26,17 @@ export async function GET() {
 
   const errors: string[] = [];
 
-  // 检查 MongoDB 连接
-  if (process.env.MONGODB_URI) {
-    try {
-      const db = await getDatabase();
-      await db.admin().ping();
-      status.services.mongodb = 'ok';
-    } catch (error) {
-      status.services.mongodb = 'error';
-      errors.push(`MongoDB: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+  // 检查 D1 数据库连接
+  try {
+    const { env } = await getCloudflareContext();
+    const db = (env as any).kerkerker_db;
+
+    // 简单查询测试数据库连接
+    await db.prepare('SELECT 1 as test').first();
+    status.services.database = 'ok';
+  } catch (error) {
+    status.services.database = 'error';
+    errors.push(`D1 Database: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 
   // 设置总体状态

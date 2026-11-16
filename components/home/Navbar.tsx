@@ -52,11 +52,10 @@ export function Navbar({ scrolled, onSearchOpen }: NavbarProps) {
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          scrolled
-            ? "bg-black"
-            : "bg-gradient-to-b from-black/80 to-transparent"
-        }`}
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled
+          ? "bg-black"
+          : "bg-gradient-to-b from-black/80 to-transparent"
+          }`}
       >
         <div className="px-4 md:px-12 py-3 md:py-4 flex items-center justify-between">
           {/* 左侧：汉堡菜单（移动端）+ Logo */}
@@ -76,11 +75,11 @@ export function Navbar({ scrolled, onSearchOpen }: NavbarProps) {
 
             {/* Logo */}
             <div className="flex items-center gap-1">
-              <img
+              {/* <img
                 className="w-8 h-8 md:w-10 md:h-10"
                 src="/logo.png"
                 alt="logo"
-              />
+              /> */}
               <h1
                 onClick={() => {
                   router.push("/");
@@ -88,7 +87,7 @@ export function Navbar({ scrolled, onSearchOpen }: NavbarProps) {
                 }}
                 className="text-red-600 text-xl md:text-2xl lg:text-3xl font-bold tracking-tight cursor-pointer hover:text-red-500 transition-colors"
               >
-                壳儿
+                十分阳光
               </h1>
             </div>
 
@@ -105,9 +104,8 @@ export function Navbar({ scrolled, onSearchOpen }: NavbarProps) {
                     <button className="text-gray-400 hover:text-white transition-colors text-sm font-medium flex items-center gap-1 py-2">
                       {item.label}
                       <svg
-                        className={`w-3 h-3 transition-transform duration-200 ${
-                          openDropdown === item.label ? "rotate-180" : ""
-                        }`}
+                        className={`w-3 h-3 transition-transform duration-200 ${openDropdown === item.label ? "rotate-180" : ""
+                          }`}
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -181,11 +179,10 @@ export function Navbar({ scrolled, onSearchOpen }: NavbarProps) {
 
       {/* 移动端侧边栏菜单 */}
       <div
-        className={`md:hidden fixed inset-0 z-[60] transition-opacity duration-300 ${
-          isMobileMenuOpen
-            ? "opacity-100 pointer-events-auto"
-            : "opacity-0 pointer-events-none"
-        }`}
+        className={`md:hidden fixed inset-0 z-[60] transition-opacity duration-300 ${isMobileMenuOpen
+          ? "opacity-100 pointer-events-auto"
+          : "opacity-0 pointer-events-none"
+          }`}
       >
         {/* 背景遮罩 */}
         <div
@@ -195,16 +192,15 @@ export function Navbar({ scrolled, onSearchOpen }: NavbarProps) {
 
         {/* 侧边栏内容 */}
         <div
-          className={`absolute top-0 left-0 h-full w-[280px] bg-gradient-to-b from-gray-900 to-black shadow-2xl transform transition-transform duration-300 ease-out ${
-            isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
+          className={`absolute top-0 left-0 h-full w-[280px] bg-gradient-to-b from-gray-900 to-black shadow-2xl transform transition-transform duration-300 ease-out ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+            }`}
         >
           {/* 侧边栏头部 */}
           <div className="p-6 border-b border-gray-800">
             <div className="flex items-center gap-2">
-              <img className="w-10 h-10" src="/logo.png" alt="logo" />
+              {/* <img className="w-10 h-10" src="/logo.png" alt="logo" /> */}
               <h2 className="text-red-600 text-2xl font-bold tracking-tight">
-                壳儿
+                十分阳光
               </h2>
             </div>
           </div>
@@ -255,7 +251,7 @@ export function Navbar({ scrolled, onSearchOpen }: NavbarProps) {
           {/* 侧边栏底部 */}
           <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-800">
             <p className="text-xs text-gray-500 text-center">
-              © 2026 壳儿 · 这就是个壳儿
+              © 2026 十分阳光 · 这就是个十分阳光
             </p>
           </div>
         </div>

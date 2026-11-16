@@ -36,7 +36,7 @@ function SearchSkeleton() {
 function SearchContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const queryKeyword = searchParams.get("q") || "";
+  const queryKeyword = searchParams?.get("q") || "";
 
   const [searchKeyword, setSearchKeyword] = useState(queryKeyword);
   const [searchResults, setSearchResults] = useState<
@@ -243,7 +243,7 @@ function SearchContent() {
                 className="text-xl font-bold tracking-tight cursor-pointer hidden sm:block"
                 onClick={goBack}
               >
-                <span className="text-red-600">壳儿</span>
+                <span className="text-red-600">十分阳光</span>
                 <span className="text-white ml-1">搜索</span>
               </h1>
             </div>
@@ -312,11 +312,10 @@ function SearchContent() {
               <div className="flex items-center gap-2 min-w-max pb-1">
                 <button
                   onClick={() => setCurrentSource(null)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
-                    currentSource === null
+                  className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${currentSource === null
                       ? "bg-white text-black shadow-lg shadow-white/10"
                       : "bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-transparent hover:border-white/10"
-                  }`}
+                    }`}
                 >
                   全部
                   <span className="ml-1.5 opacity-60">
@@ -331,20 +330,18 @@ function SearchContent() {
                     <button
                       key={source.key}
                       onClick={() => setCurrentSource(source)}
-                      className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1.5 ${
-                        currentSource?.key === source.key
+                      className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1.5 ${currentSource?.key === source.key
                           ? "bg-red-600 text-white shadow-lg shadow-red-900/20"
                           : "bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-transparent hover:border-white/10"
-                      }`}
+                        }`}
                     >
                       {source.name}
                       {count > 0 && (
                         <span
-                          className={`px-1.5 py-0.5 rounded-full text-[10px] ${
-                            currentSource?.key === source.key
+                          className={`px-1.5 py-0.5 rounded-full text-[10px] ${currentSource?.key === source.key
                               ? "bg-white/20 text-white"
                               : "bg-white/10 text-gray-500"
-                          }`}
+                            }`}
                         >
                           {count}
                         </span>

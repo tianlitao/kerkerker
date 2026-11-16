@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { getShortsSourcesFromDB, getShortsSourceByKey } from "@/lib/shorts-sources-db";
 import type { ShortDramaSource } from "@/types/shorts-source";
 
@@ -24,6 +25,9 @@ export interface ShortsListResponse {
 
 export async function GET(request: NextRequest) {
   try {
+    const { env } = await getCloudflareContext();
+    const db = (env as any).kerkerker_db;
+
     const searchParams = request.nextUrl.searchParams;
     const page = searchParams.get("pg") || "1";
     const sourceKey = searchParams.get("source");
@@ -31,7 +35,7 @@ export async function GET(request: NextRequest) {
     // 从数据库获取短剧源配置
     let sources: ShortDramaSource[];
     try {
-      sources = await getShortsSourcesFromDB();
+      sources = await getShortsSourcesFromDB(db);
     } catch {
       sources = [];
     }
@@ -46,10 +50,10 @@ export async function GET(request: NextRequest) {
 
     // 获取指定的资源站配置，默认使用第一个
     let source: ShortDramaSource | null = null;
-    
+
     if (sourceKey) {
       try {
-        source = await getShortsSourceByKey(sourceKey);
+        source = await getShortsSourceByKey(db, sourceKey);
       } catch {
         source = sources.find(s => s.key === sourceKey) || null;
       }
