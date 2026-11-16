@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Menu, X, Home, Film, Tv, Clock, Video, Github, Calendar, History } from "lucide-react";
+import { Menu, X, Home, Film, Tv, Clock, Video, Calendar, History } from "lucide-react";
 import { HistoryPopup } from "./HistoryPopup";
 
 interface NavbarProps {
@@ -39,14 +39,7 @@ export function Navbar({ scrolled, onSearchOpen }: NavbarProps) {
       icon: Video,
       children: [
         { href: "/shorts", label: "短剧" },
-        { href: "/dailymotion", label: "短剧Motion" },
       ],
-    },
-    {
-      href: "https://github.com/unilei/kerkerker",
-      label: "Github",
-      icon: Github,
-      external: true,
     },
   ];
 
@@ -144,7 +137,6 @@ export function Navbar({ scrolled, onSearchOpen }: NavbarProps) {
                   <Link
                     key={item.href}
                     href={item.href!}
-                    target={item.external ? "_blank" : undefined}
                     className="text-gray-400 hover:text-white transition-colors text-sm font-medium"
                   >
                     {item.label}
@@ -243,7 +235,6 @@ export function Navbar({ scrolled, onSearchOpen }: NavbarProps) {
                 <Link
                   key={item.href}
                   href={item.href!}
-                  target={item.external ? "_blank" : undefined}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-300 hover:text-white hover:bg-white/10 transition-all duration-200 group"
                 >
