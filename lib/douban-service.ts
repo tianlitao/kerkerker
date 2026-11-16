@@ -5,13 +5,32 @@
  * 服务地址通过环境变量 NEXT_PUBLIC_DOUBAN_API_URL 配置
  */
 
+// 榜单接口优先走本站 D1 缓存（由 douban-refresh Worker 定时抓取），
+// 其余未迁移的接口仍回退到外部微服务。
 const DOUBAN_API_URL = process.env.NEXT_PUBLIC_DOUBAN_API_URL || 'https://iamyourfather.link0.me'
+
+const LOCAL_API_PREFIXES = ['/api/v1/category', '/api/v1/250']
+
+// 不带筛选的 /api/v1/new 走本站 D1 榜单缓存。
+// 带筛选参数时豆瓣没有等价的分类榜单，仍由外部微服务处理。
+const LOCAL_NEW_ENDPOINT = '/api/v1/new'
+
+function resolveServiceUrl(endpoint: string): string {
+  if (endpoint === LOCAL_NEW_ENDPOINT) {
+    return endpoint
+  }
+  if (LOCAL_API_PREFIXES.some((prefix) => endpoint.startsWith(prefix))) {
+    return endpoint
+  }
+  // /api/v1/new?xxx 带筛选，退回外部微服务
+  return `${DOUBAN_API_URL}${endpoint}`
+}
 
 /**
  * 通用请求函数
  */
 async function fetchFromService<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const url = `${DOUBAN_API_URL}${endpoint}`;
+  const url = resolveServiceUrl(endpoint);
   
   try {
     const response = await fetch(url, {
