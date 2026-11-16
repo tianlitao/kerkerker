@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+
+import { requireAdminRequest } from '@/lib/admin-route';
 
 /**
  * 数据库状态 API
@@ -7,8 +10,13 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
  * 
  * 返回数据库连接状态、延迟、基本信息
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   const startTime = Date.now();
+
+  const unauthorizedResponse = requireAdminRequest(request);
+  if (unauthorizedResponse) {
+    return unauthorizedResponse;
+  }
 
   try {
     const { env } = await getCloudflareContext();

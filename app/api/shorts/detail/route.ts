@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import {
+  assertSafeOutboundUrl,
+  UnsafeOutboundUrlError,
+} from "@/lib/url-security";
+import {
   getShortsSourcesFromDB,
   getShortsSourceByKey,
 } from "@/lib/shorts-sources-db";
@@ -80,7 +84,9 @@ export async function GET(request: NextRequest) {
       source = sources[0];
     }
 
-    const apiUrl = `${source.api}?ac=detail&ids=${ids}`;
+    // SSRF 防御：即便 source 来自 DB，该接口匿名开放，仍校验对外请求目标
+    const safeApiBase = (await assertSafeOutboundUrl(source.api)).toString();
+    const apiUrl = `${safeApiBase}?ac=detail&ids=${ids}`;
 
     const response = await fetch(apiUrl, {
       headers: {
@@ -127,6 +133,12 @@ export async function GET(request: NextRequest) {
       data: detail,
     });
   } catch (error) {
+    if (error instanceof UnsafeOutboundUrlError) {
+      return NextResponse.json(
+        { code: error.status, msg: error.message, data: null },
+        { status: error.status }
+      );
+    }
     console.error("[Shorts Detail API Error]", error);
     return NextResponse.json(
       { code: 500, msg: "获取短剧详情失败", data: null },

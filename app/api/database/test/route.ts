@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import type { NextRequest } from 'next/server';
+
+import { requireAdminRequest } from '@/lib/admin-route';
 
 /**
  * 数据库连接测试 API
@@ -7,8 +10,12 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
  * 
  * 测试 D1 数据库连接
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
   const startTime = Date.now();
+  const unauthorizedResponse = requireAdminRequest(request);
+  if (unauthorizedResponse) {
+    return unauthorizedResponse;
+  }
 
   try {
     const { env } = await getCloudflareContext();
@@ -26,7 +33,7 @@ export async function POST() {
     }
 
     // 执行简单查询测试连接
-    const result = await db.prepare('SELECT 1 as test').first();
+    await db.prepare('SELECT 1 as test').first();
 
     const latency = Date.now() - startTime;
 

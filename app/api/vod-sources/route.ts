@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { requireAdminRequest } from '@/lib/admin-route';
 import {
   getVodSourcesFromDB,
   getAllVodSourcesFromDB,
@@ -19,6 +20,11 @@ export async function GET(request: NextRequest) {
     const includeDisabled = searchParams.get('all') === 'true';
 
     if (includeDisabled) {
+      const unauthorizedResponse = requireAdminRequest(request);
+      if (unauthorizedResponse) {
+        return unauthorizedResponse;
+      }
+
       const allSources = await getAllVodSourcesFromDB(db);
       return NextResponse.json({
         code: 200,
@@ -54,6 +60,11 @@ export async function GET(request: NextRequest) {
 // POST - 保存视频源列表
 export async function POST(request: NextRequest) {
   try {
+    const unauthorizedResponse = requireAdminRequest(request);
+    if (unauthorizedResponse) {
+      return unauthorizedResponse;
+    }
+
     const { env } = await getCloudflareContext();
     const db = (env as any).kerkerker_db;
 
@@ -106,6 +117,11 @@ export async function POST(request: NextRequest) {
 // PUT - 更新选中的视频源
 export async function PUT(request: NextRequest) {
   try {
+    const unauthorizedResponse = requireAdminRequest(request);
+    if (unauthorizedResponse) {
+      return unauthorizedResponse;
+    }
+
     const { env } = await getCloudflareContext();
     const db = (env as any).kerkerker_db;
 

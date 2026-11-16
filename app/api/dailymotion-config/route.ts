@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { requireAdminRequest } from '@/lib/admin-route';
 import {
   getDailymotionConfigFromDB,
   addDailymotionChannelToDB,
@@ -36,9 +37,13 @@ export async function GET() {
 //  POST - 更新配置
 export async function POST(request: NextRequest) {
   try {
+    const unauthorizedResponse = requireAdminRequest(request);
+    if (unauthorizedResponse) {
+      return unauthorizedResponse;
+    }
+
     const { env } = await getCloudflareContext();
     const db = (env as any).kerkerker_db;
-
     const body = await request.json();
 
     if (body.action === 'add') {
