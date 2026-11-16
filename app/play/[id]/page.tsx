@@ -505,7 +505,7 @@ export default function PlayPage() {
           }`}
         >
           <div
-            className="relative w-full h-full bg-black overflow-hidden lg:rounded-xl"
+            className="relative w-full aspect-video max-h-[calc(100vh-var(--site-navbar-height)-var(--player-toolbar-height))] bg-black overflow-hidden mx-auto lg:aspect-auto lg:h-full lg:rounded-xl"
           >
             {dramaDetail && dramaDetail.episodes.length > 0 && (
               <UnifiedPlayer
