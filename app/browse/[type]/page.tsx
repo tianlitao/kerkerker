@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import {
   Film,
   Tv,
@@ -20,7 +20,10 @@ import {
 } from "lucide-react";
 import DoubanCard from "@/components/DoubanCard";
 import { DoubanMovie } from "@/types/douban";
+import { Navbar } from "@/components/home/Navbar";
+import { SearchModal } from "@/components/home/SearchModal";
 import { useMovieMatch } from "@/hooks/useMovieMatch";
+import { useScrollState } from "@/hooks/useScrollState";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { Toast } from "@/components/Toast";
 import {
@@ -246,11 +249,12 @@ function FilterRow({
 
 // ============ 主组件 ============
 export default function BrowsePage() {
-  const router = useRouter();
   const params = useParams();
   const pageType = (params?.type as string) || "movies";
 
   const config = PAGE_CONFIG[pageType] || PAGE_CONFIG.movies;
+  const [showSearch, setShowSearch] = useState(false);
+  const scrolled = useScrollState(50);
 
   // 使用影片点击 hook（与首页一致，点击后跳转详情页）
   const { handleMovieClick, toast, setToast } = useMovieMatch();
@@ -429,10 +433,6 @@ export default function BrowsePage() {
     }
   };
 
-  const goBack = () => {
-    router.push("/");
-  };
-
   // 更新筛选器
   const updateFilter = (key: keyof Filters, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -449,37 +449,8 @@ export default function BrowsePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-gray-950 to-black text-white">
-      {/* 顶部导航栏 */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-gray-800/50">
-        <div className="px-4 md:px-12 py-5">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={goBack}
-              className="flex items-center gap-2 text-white/80 hover:text-white transition-all group"
-            >
-              <div className="p-1.5 rounded-full bg-white/5 group-hover:bg-white/10 transition-colors">
-                <svg
-                  className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
-              </div>
-              <span className="text-sm md:text-base font-medium">返回</span>
-            </button>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-r from-red-600 to-red-500 bg-clip-text text-transparent">
-              十分阳光
-            </h1>
-          </div>
-        </div>
-      </nav>
+      <Navbar scrolled={scrolled} onSearchOpen={() => setShowSearch(true)} />
+      <SearchModal isOpen={showSearch} onClose={() => setShowSearch(false)} />
 
       {/* Hero 区域 */}
       <div className="relative pt-24 pb-4 px-4 md:px-12 overflow-hidden">

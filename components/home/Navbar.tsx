@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Menu, X, Home, Film, Tv, Clock, Video, Calendar, History } from "lucide-react";
+import { Menu, X, Home, Film, Tv, Clock, Video, Calendar, History, Trophy } from "lucide-react";
 import { HistoryPopup } from "./HistoryPopup";
 
 interface NavbarProps {
@@ -31,6 +31,7 @@ export function Navbar({ scrolled, onSearchOpen }: NavbarProps) {
     { href: "/", label: "首页", icon: Home },
     { href: "/browse/movies", label: "电影", icon: Film },
     { href: "/browse/tv", label: "电视剧", icon: Tv },
+    { href: "/category/top250", label: "Top 250", icon: Trophy },
     { href: "/calendar", label: "追剧日历", icon: Calendar },
     { href: "/browse/latest", label: "最新", icon: Clock },
     { href: "/history", label: "历史记录", icon: History, mobileOnly: true },
@@ -52,8 +53,9 @@ export function Navbar({ scrolled, onSearchOpen }: NavbarProps) {
           ? "bg-black"
           : "bg-gradient-to-b from-black/80 to-transparent"
           }`}
+        style={{ height: "var(--site-navbar-height)" }}
       >
-        <div className="px-4 md:px-12 py-3 md:py-4 flex items-center justify-between">
+        <div className="h-full px-4 md:px-12 py-3 md:py-4 flex items-center justify-between">
           {/* 左侧：汉堡菜单（移动端）+ Logo */}
           <div className="flex items-center space-x-2 md:space-x-8">
             {/* 汉堡菜单按钮 - 仅移动端 */}

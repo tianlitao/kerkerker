@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   Play,
   Star,
   Loader2,
@@ -18,6 +17,9 @@ import {
   Film,
 } from "lucide-react";
 import Link from "next/link";
+import { Navbar } from "@/components/home/Navbar";
+import { SearchModal } from "@/components/home/SearchModal";
+import { useScrollState } from "@/hooks/useScrollState";
 import { getImageUrl } from "@/lib/utils/image-utils";
 import { cleanTitleForSearch } from "@/lib/utils/title-utils";
 import { loadMovieCache } from "@/hooks/useMovieMatch";
@@ -88,16 +90,8 @@ export default function MovieDetailPage() {
   // 电影详情状态
   const [movieDetail, setMovieDetail] = useState<MovieDetail | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(true);
-
-  // 智能返回：如果有历史记录则返回，否则跳转首页
-  const goBack = useCallback(() => {
-    // window.history.length > 2 表示有可返回的历史（1是初始页面，2是当前页面）
-    if (window.history.length > 2) {
-      router.back();
-    } else {
-      router.push("/");
-    }
-  }, [router]);
+  const [showSearch, setShowSearch] = useState(false);
+  const scrolled = useScrollState(50);
 
   // 获取电影详情：优先缓存快速显示，API 补充详细信息
   useEffect(() => {
@@ -371,30 +365,12 @@ export default function MovieDetailPage() {
         <div className="absolute inset-0 bg-linear-to-r from-[#0a0a0a] via-[#0a0a0a]/60 to-transparent z-10" />
       </div>
 
-      {/* 导航栏 */}
-      <nav className="sticky top-0 left-0 right-0 z-50 bg-[#0a0a0a]/95 backdrop-blur-xl border-b border-white/5 shadow-2xl shadow-black/50">
-        <div className="max-w-[2000px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={goBack}
-              className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors group"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
-            </button>
-            <h1
-              className="text-xl font-bold tracking-tight cursor-pointer hidden sm:block"
-              onClick={goBack}
-            >
-              <span className="text-red-600">十分阳光</span>
-              <span className="text-white ml-1">详情</span>
-            </h1>
-          </div>
-        </div>
-      </nav>
+      <Navbar scrolled={scrolled} onSearchOpen={() => setShowSearch(true)} />
+      <SearchModal isOpen={showSearch} onClose={() => setShowSearch(false)} />
 
       {/* 加载中骨架屏 */}
       {isLoadingDetail && (
-        <main className="relative z-20 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        <main className="relative z-20 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 md:pt-28 pb-8 md:pb-12">
           <div className="flex flex-col lg:flex-row gap-12 items-start">
             {/* 海报骨架 */}
             <div className="w-full max-w-[300px] mx-auto lg:w-[360px] shrink-0">
@@ -466,7 +442,7 @@ export default function MovieDetailPage() {
 
       {/* 主内容 */}
       {!isLoadingDetail && (
-        <main className="relative z-20 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        <main className="relative z-20 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 md:pt-28 pb-8 md:pb-12">
           <div className="flex flex-col lg:flex-row gap-12 items-start">
             {/* 左侧海报 */}
             <div className="w-full max-w-[300px] mx-auto lg:w-[360px] shrink-0 animate-fade-in">

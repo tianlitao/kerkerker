@@ -1,7 +1,7 @@
 // 图片处理工具函数
 
 // 默认占位图
-const DEFAULT_PLACEHOLDER = '/movie-default-bg.jpg';
+const DEFAULT_PLACEHOLDER = '/placeholder-poster.svg';
 
 /**
  * 智能获取图片URL - 通过代理服务器获取图片

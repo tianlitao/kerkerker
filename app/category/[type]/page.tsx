@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import {
@@ -15,10 +16,15 @@ import {
   BookOpen,
 } from "lucide-react";
 import DoubanCard from "@/components/DoubanCard";
+import { Navbar } from "@/components/home/Navbar";
+import { SearchModal } from "@/components/home/SearchModal";
 import { useMovieMatch } from "@/hooks/useMovieMatch";
 import { useCategoryData } from "@/hooks/useCategoryData";
+import { useScrollState } from "@/hooks/useScrollState";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { Toast } from "@/components/Toast";
+
+const TOP250_PAGE_SIZE = 50;
 
 // URL 路径到分类配置的映射
 const CATEGORY_CONFIG: Record<
@@ -126,6 +132,15 @@ export default function CategoryPage() {
   const router = useRouter();
   const params = useParams();
   const categoryType = params?.type as string;
+  const isTop250 = categoryType === "top250";
+  const [showSearch, setShowSearch] = useState(false);
+  const scrolled = useScrollState(50);
+  const [top250Pager, setTop250Pager] = useState({
+    type: categoryType,
+    page: 1,
+  });
+  const top250Page =
+    top250Pager.type === categoryType ? top250Pager.page : 1;
 
   // 使用影片点击 hook
   const { handleMovieClick, toast, setToast } = useMovieMatch();
@@ -133,6 +148,24 @@ export default function CategoryPage() {
   // 使用 SWR 缓存的分类数据 hook
   const { movies, loading, loadingMore, error, hasMore, loadMore, refetch } =
     useCategoryData(categoryType);
+
+  const top250TotalPages = Math.ceil(movies.length / TOP250_PAGE_SIZE);
+  const visibleMovies = isTop250
+    ? movies.slice(
+        (top250Page - 1) * TOP250_PAGE_SIZE,
+        top250Page * TOP250_PAGE_SIZE
+      )
+    : movies;
+  const top250Pages = Array.from(
+    { length: top250TotalPages },
+    (_, index) => index + 1
+  );
+
+  const goToTop250Page = (page: number) => {
+    const nextPage = Math.min(Math.max(page, 1), top250TotalPages || 1);
+    setTop250Pager({ type: categoryType, page: nextPage });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const config = CATEGORY_CONFIG[categoryType] || {
     name: "影视列表",
@@ -155,37 +188,8 @@ export default function CategoryPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-gray-950 to-black text-white">
-      {/* 顶部导航栏 */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-gray-800/50">
-        <div className="px-4 md:px-12 py-5">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={goBack}
-              className="flex items-center gap-2 text-white/80 hover:text-white transition-all group"
-            >
-              <div className="p-1.5 rounded-full bg-white/5 group-hover:bg-white/10 transition-colors">
-                <svg
-                  className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
-              </div>
-              <span className="text-sm md:text-base font-medium">返回</span>
-            </button>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-r from-red-600 to-red-500 bg-clip-text text-transparent">
-              十分阳光
-            </h1>
-          </div>
-        </div>
-      </nav>
+      <Navbar scrolled={scrolled} onSearchOpen={() => setShowSearch(true)} />
+      <SearchModal isOpen={showSearch} onClose={() => setShowSearch(false)} />
 
       {/* Hero 区域 */}
       <div className="relative pt-24 pb-6 px-4 md:px-12 overflow-hidden">
@@ -250,7 +254,7 @@ export default function CategoryPage() {
         ) : (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-3 md:gap-4 lg:gap-5">
-              {movies.map((movie) => (
+              {visibleMovies.map((movie) => (
                 <div
                   key={movie.id}
                   className="transform transition-all duration-300 hover:scale-105"
@@ -295,8 +299,47 @@ export default function CategoryPage() {
               </div>
             )}
 
+            {/* Top 250 分页 */}
+            {isTop250 && top250TotalPages > 1 && (
+              <div className="flex flex-col items-center gap-3 mt-12">
+                <div className="text-sm text-gray-500">
+                  第 {top250Page} / {top250TotalPages} 页 · 共 {movies.length} 部
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => goToTop250Page(top250Page - 1)}
+                    disabled={top250Page === 1}
+                    className="px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed text-sm text-white transition-colors border border-white/10"
+                  >
+                    上一页
+                  </button>
+                  {top250Pages.map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => goToTop250Page(page)}
+                      aria-current={page === top250Page ? "page" : undefined}
+                      className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors border ${
+                        page === top250Page
+                          ? "bg-red-600 border-red-600 text-white"
+                          : "bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:text-white"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => goToTop250Page(top250Page + 1)}
+                    disabled={top250Page === top250TotalPages}
+                    className="px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed text-sm text-white transition-colors border border-white/10"
+                  >
+                    下一页
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* 没有更多了 */}
-            {!hasMore && movies.length > 0 && (
+            {!hasMore && movies.length > 0 && !isTop250 && (
               <div className="text-center mt-12 text-gray-500">
                 <div className="inline-flex items-center gap-2 px-6 py-3 bg-white/5 rounded-xl">
                   <svg

@@ -3,6 +3,17 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /* 共用导航栏高度：移动端 py-3 + 40px 内容，桌面端 py-4 + 40px 内容 */
+  --site-navbar-height: 64px;
+  /* 播放页操作栏高度：移动端 48px，桌面端 64px */
+  --player-toolbar-height: 48px;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --site-navbar-height: 72px;
+    --player-toolbar-height: 64px;
+  }
 }
 
 @theme inline {

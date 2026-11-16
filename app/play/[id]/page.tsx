@@ -10,6 +10,10 @@ import { DanmakuSelector } from "@/components/player/DanmakuSelector";
 import type { DanmakuItem } from "@/lib/player/danmaku-service";
 import type { PlayerConfig } from "@/app/api/player-config/route";
 import { ArrowLeft, X, ChevronLeft } from "lucide-react";
+import { Navbar } from "@/components/home/Navbar";
+import { SearchModal } from "@/components/home/SearchModal";
+import { useScrollState } from "@/hooks/useScrollState";
+import { getImageUrl } from "@/lib/utils/image-utils";
 
 interface AvailableSource {
   source_key: string;
@@ -33,6 +37,8 @@ export default function PlayPage() {
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [showAllEpisodes, setShowAllEpisodes] = useState(false);
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
+  const [showSearch, setShowSearch] = useState(false);
+  const scrolled = useScrollState(50);
 
   // 多源相关状态
   const [availableSources, setAvailableSources] = useState<AvailableSource[]>(
@@ -348,7 +354,12 @@ export default function PlayPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div
+        className="min-h-screen bg-black flex flex-col items-center justify-center"
+        style={{ paddingTop: "var(--site-navbar-height)" }}
+      >
+        <Navbar scrolled={scrolled} onSearchOpen={() => setShowSearch(true)} />
+        <SearchModal isOpen={showSearch} onClose={() => setShowSearch(false)} />
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-2 border-stone-300 border-t-amber-500 mx-auto mb-4" />
           <p className="text-stone-300 text-lg">加载中...</p>
@@ -359,7 +370,12 @@ export default function PlayPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div
+        className="min-h-screen bg-black flex flex-col items-center justify-center"
+        style={{ paddingTop: "var(--site-navbar-height)" }}
+      >
+        <Navbar scrolled={scrolled} onSearchOpen={() => setShowSearch(true)} />
+        <SearchModal isOpen={showSearch} onClose={() => setShowSearch(false)} />
         <div className="text-center px-6">
           <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg
@@ -392,19 +408,40 @@ export default function PlayPage() {
     return null;
   }
 
+  const cover = getImageUrl(dramaDetail.pic || "");
+
   return (
-    <div
-      className="w-full h-screen"
-      style={{
-        backgroundAttachment: "fixed",
-        backgroundPosition: "center",
-        backgroundSize: "cover",
-        backgroundImage: "url(/movie-default-bg.jpg)",
-      }}
-    >
-      {/* 顶部导航栏 - Netflix风格 */}
-      <nav className="sticky top-0 z-450 bg-zinc-900/95 backdrop-blur-md border-b border-white/5">
-        <div className="w-full mx-auto px-4 md:px-6 h-[48px] md:h-[64px] flex items-center justify-between">
+    <div className="w-full min-h-screen bg-black">
+      {/* 沉浸式背景：使用当前剧集封面，与详情页一致 */}
+      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+        <div className="absolute inset-0 bg-black z-0" />
+        {cover && (
+          <img
+            src={cover}
+            alt={dramaDetail.name}
+            className="absolute inset-0 w-full h-full object-cover opacity-20 blur-3xl scale-110"
+          />
+        )}
+        <div className="absolute inset-0 bg-linear-to-t from-black via-black/80 to-transparent z-10" />
+        <div className="absolute inset-0 bg-linear-to-r from-black via-black/60 to-transparent z-10" />
+      </div>
+
+      <div
+        className="relative z-20"
+        style={{ paddingTop: "var(--site-navbar-height)" }}
+      >
+      <Navbar scrolled={scrolled} onSearchOpen={() => setShowSearch(true)} />
+      <SearchModal isOpen={showSearch} onClose={() => setShowSearch(false)} />
+
+      {/* 播放器操作栏 - Netflix风格 */}
+      <nav
+        className="sticky z-450 bg-zinc-900/95 backdrop-blur-md border-b border-white/5"
+        style={{
+          top: "var(--site-navbar-height)",
+          height: "var(--player-toolbar-height)",
+        }}
+      >
+        <div className="w-full mx-auto px-4 md:px-6 h-full flex items-center justify-between">
           <button
             onClick={() => router.back()}
             className="text-white text-lg font-bold flex items-center gap-2 hover:text-red-500 transition-all duration-300 group"
@@ -458,19 +495,17 @@ export default function PlayPage() {
       </nav>
 
       {/* 主内容区域 - 左右分栏布局 */}
-      <div className="w-full mx-auto flex flex-col lg:flex-row gap-0 p-0 relative">
+      <div className="w-full mx-auto flex flex-col lg:flex-row gap-0 relative">
         {/* 左侧：视频播放器区域 */}
         <div
-          className={`flex-1 transition-all duration-300 ${
+          className={`flex-1 min-w-0 transition-all duration-300 ${
             isRightPanelOpen
-              ? "lg:min-h-[calc(100vh-65px)]"
-              : "lg:h-[calc(100vh-65px)]"
+              ? "lg:min-h-[calc(100vh-var(--site-navbar-height)-var(--player-toolbar-height))] lg:p-4"
+              : "lg:h-[calc(100vh-var(--site-navbar-height)-var(--player-toolbar-height))] lg:p-4"
           }`}
         >
           <div
-            className={`relative w-full bg-black overflow-hidden ${
-              isRightPanelOpen ? "aspect-video h-full" : "h-full"
-            }`}
+            className="relative w-full h-full bg-black overflow-hidden lg:rounded-xl"
           >
             {dramaDetail && dramaDetail.episodes.length > 0 && (
               <UnifiedPlayer
@@ -526,7 +561,7 @@ export default function PlayPage() {
 
         {/* 右侧：剧集信息和选择器 - Netflix风格 */}
         {isRightPanelOpen ? (
-          <div className="w-full lg:w-[380px] xl:w-[420px] bg-zinc-900 overflow-y-auto lg:max-h-[calc(100vh-65px)] relative">
+          <div className="w-full lg:w-[380px] xl:w-[420px] bg-zinc-900 overflow-y-auto lg:max-h-[calc(100vh-var(--site-navbar-height)-var(--player-toolbar-height))] relative lg:mr-4 lg:mt-4 lg:mb-4 lg:rounded-xl">
             {/* 关闭按钮 */}
             <button
               onClick={() => setIsRightPanelOpen(false)}
@@ -788,6 +823,7 @@ export default function PlayPage() {
             </div>
           </div>
         ) : null}
+      </div>
       </div>
     </div>
   );
