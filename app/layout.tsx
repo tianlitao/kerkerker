@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { SWRProvider } from "@/components/providers/swr-provider";
 import { GoogleAnalytics } from "@/components/analytics/google-analytics";
-import { FiftyOneLA } from "@/components/analytics/fiftyone-la";
+import { BaiduTongji } from "@/components/analytics/baidu-tongji";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -48,8 +48,8 @@ export default function RootLayout({
         {/* Google Analytics 4 — 十分阳光 (G-1JW7Y1SC8R) */}
         <GoogleAnalytics />
 
-        {/* 51.LA 统计 — 十分阳光 (3LZNDjo7McO3tnMQ) */}
-        <FiftyOneLA />
+        {/* 百度统计 — 十分阳光 (3de919cf21f9a4551914213af2ceebc9) */}
+        <BaiduTongji />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
